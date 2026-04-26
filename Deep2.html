@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InterviewPrep – Personal Q&A Study Tool</title>
+
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        surface: '#1e1e2e',
+                        'surface-alt': '#252536',
+                        accent: '#7c3aed',
+                        'accent-hover': '#6d28d9',
+                        muted: '#a1a1aa',
+                        border: '#2e2e40',
+                        star: '#f59e0b',
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.3s ease-out',
+                        'slide-down': 'slideDown 0.25s ease-out',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0', transform: 'translateY(6px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
+                        slideDown: {
+                            '0%': { opacity: '0', maxHeight: '0px' },
+                            '100%': { opacity: '1', maxHeight: '600px' },
+                        },
+                    },
+                },
+            },
+        };
+    </script>
+
+    <style>
+        :root {
+            --bg-primary: #f8f7fc;
+            --bg-secondary: #ffffff;
+            --surface: #f0eef5;
+            --surface-alt: #e8e5f0;
+            --text-primary: #1f1f2e;
+            --text-secondary: #4a4a5c;
+            --muted: #6b6b7e;
+            --border: #d4d0e0;
+            --card-shadow: 0 4px 20px rgba(124, 58, 237, 0.06);
+            --card-hover-shadow: 0 8px 30px rgba(124, 58, 237, 0.12);
+            --header-bg: rgba(255, 255, 255, 0.85);
+            --gradient-from: #faf9ff;
+            --gradient-to: #f3f0ff;
+            --sidebar-bg: rgba(255, 255, 255, 0.7);
+        }
+
+        .dark {
+            --bg-primary: #12121a;
+            --bg-secondary: #1a1a2a;
+            --surface: #1e1e2e;
+            --surface-alt: #252536;
+            --text-primary: #f3f4f6;
+            --text-secondary: #d1d5db;
+            --muted: #a1a1aa;
+            --border: #2e2e40;
+            --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+            --card-hover-shadow: 0 8px 30px rgba(124, 58, 237, 0.12);
+            --header-bg: rgba(18, 18, 26, 0.9);
+            --gradient-from: #12121a;
+            --gradient-to: #1a1025;
+            --sidebar-bg: rgba(26, 26, 42, 0.8);
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--gradient-from) 0%, var(--gradient-to) 100%);
+            background-attachment: fixed;
+            color: var(--text-primary);
+        }
+
+        .glass-header {
+            background: var(--header-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .glass-card {
+            background: linear-gradient(145deg, var(--surface) 0%, var(--surface-alt) 100%);
+            box-shadow: var(--card-shadow);
+            border: 1px solid var(--border);
+        }
+
+        .glass-sidebar {
+            background: var(--sidebar-bg);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #7c3aed 0%, #c084fc 50%, #a855f7 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .gradient-border {
+            position: relative;
+        }
+        .gradient-border::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            padding: 1.5px;
+            background: linear-gradient(135deg, #7c3aed, #c084fc, #a855f7);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .gradient-border:hover::before {
+            opacity: 1;
+        }
+
+        .active-topic-gradient {
+            background: linear-gradient(135deg, #7c3aed 0%, #9333ea 100%);
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #3f3f5c;
+            border-radius: 999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #52527a;
+        }
+
+        .answer-panel {
+            display: grid;
+            grid-template-rows: 0fr;
+            transition: grid-template-rows 0.3s ease;
+        }
+        .answer-panel.open {
+            grid-template-rows: 1fr;
+        }
+        .answer-inner {
+            overflow: hidden;
+        }
+
+        .topic-tab {
+            transition: all 0.2s ease;
+        }
+        .topic-tab:hover {
+            transform: translateX(3px);
+        }
+
+        .qa-card {
+            transition: all 0.25s ease;
+        }
+        .qa-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--card-hover-shadow);
+        }
+
+        #searchInput:focus {
+            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.3);
+        }
+
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes toastOut {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(-8px); }
+        }
+        .toast-enter {
+            animation: toastIn 0.3s ease forwards;
+        }
+        .toast-exit {
+            animation: toastOut 0.3s ease forwards;
+        }
+
+        .bookmark-btn {
+            transition: transform 0.2s ease, color 0.2s ease;
+        }
+        .bookmark-btn:hover {
+            transform: scale(1.15);
+        }
+        .bookmark-btn.bookmarked {
+            color: #f59e0b;
+        }
+
+        .timer-ring {
+            transition: stroke-dashoffset 1s linear;
+        }
+
+        .theme-transition {
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+        }
+    </style>
+<base target="_blank">
+</head>
+
+<body class="min-h-screen font-sans antialiased theme-transition">
+
+    <header class="sticky top-0 z-50 glass-header border-b border-[var(--border)]">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4 flex-wrap">
+            <div class="flex items-center gap-3 shrink-0">
+                <span class="text-2xl">📚</span>
+                <div>
+                    <h1 class="text-lg font-bold tracking-tight">
+                        <span class="text-[var(--text-primary)]">SuryaHemanth</span><span class="gradient-text">Krishna</span>
+                    </h1>
+                    <p id="datasetInfo" class="text-xs text-[var(--muted)] mt-1 hidden"></p>
+                </div>
+            </div>
+
+            <!-- Timer Widget -->
+            <div class="flex items-center gap-3 bg-[var(--surface)] rounded-2xl px-4 py-2 border border-[var(--border)]">
+                <div class="relative w-10 h-10">
+                    <svg class="w-10 h-10 -rotate-90" viewBox="0 0 36 36">
+                        <path class="text-[var(--surface-alt)]" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3" />
+                        <path id="timerRing" class="timer-ring text-accent" stroke-dasharray="100, 100" stroke-dashoffset="0" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
+                    </svg>
+                    <span id="timerDisplay" class="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-[var(--text-primary)]">25:00</span>
+                </div>
+                <div class="flex items-center gap-1">
+                    <button id="timerToggleBtn" class="p-1.5 rounded-lg hover:bg-[var(--surface-alt)] text-[var(--muted)] hover:text-accent transition-colors" title="Start/Pause">
+                        <svg id="timerPlayIcon" class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                        <svg id="timerPauseIcon" class="w-4 h-4 hidden" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                    </button>
+                    <button id="timerResetBtn" class="p-1.5 rounded-lg hover:bg-[var(--surface-alt)] text-[var(--muted)] hover:text-accent transition-colors" title="Reset">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="relative flex-1 min-w-[200px] max-w-lg">
+                <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted)] pointer-events-none" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" />
+                </svg>
+                <input id="searchInput" type="text" placeholder="Search questions & answers..." autocomplete="off"
+                    class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder-[var(--muted)] focus:outline-none focus:border-accent transition-all" />
+                <span id="searchCount" class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--muted)] hidden"></span>
+            </div>
+
+            <div class="flex items-center gap-2 shrink-0">
+                <button id="themeToggleBtn" class="p-2.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-[var(--muted)] hover:text-accent hover:border-accent transition-all duration-200" title="Toggle theme">
+                    <svg id="sunIcon" class="w-4 h-4 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                    <svg id="moonIcon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+                </button>
+
+                <button id="uploadBtn" class="px-4 py-2.5 rounded-xl bg-accent hover:bg-accent-hover text-white text-sm font-semibold transition-all duration-200 hover:shadow-lg hover:shadow-accent/25 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5-5m0 0l5 5m-5-5v12" />
+                    </svg>
+                    Upload JSON
+                </button>
+                <input type="file" id="fileInput" accept=".json,application/json" class="hidden" />
+                <button id="loadLocalBtn" class="px-4 py-2.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-[var(--text-primary)] text-sm font-semibold hover:bg-[var(--surface-alt)] hover:text-[var(--text-primary)] transition-all duration-200 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    Load combined.json
+                </button>
+
+                <button id="expandAllBtn" title="Expand all answers" class="p-2.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text-primary)] hover:border-accent transition-all duration-200">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </button>
+                <button id="collapseAllBtn" title="Collapse all answers" class="p-2.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text-primary)] hover:border-accent transition-all duration-200">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-6 flex flex-col lg:flex-row gap-6">
+        <aside id="topicSidebar" class="lg:w-64 shrink-0 glass-sidebar rounded-2xl p-4 lg:sticky lg:top-24 self-start max-h-[70vh] overflow-y-auto">
+            <h2 class="text-xs font-bold uppercase tracking-widest text-[var(--muted)] mb-3">📂 Topics</h2>
+            <nav id="topicNav" class="flex flex-col gap-1"></nav>
+            <div id="emptySidebar" class="text-center py-10 text-[var(--muted)] text-sm hidden">
+                <span class="text-3xl block mb-2">📭</span>
+                No topics yet.<br />Upload a JSON file.
+            </div>
+        </aside>
+
+        <main class="flex-1 min-w-0">
+            <div id="statsRow" class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5 hidden">
+                <div class="glass-card rounded-xl p-4 text-center gradient-border">
+                    <div id="statTopics" class="text-2xl font-bold gradient-text">0</div>
+                    <div class="text-xs text-[var(--muted)] mt-1">Topics</div>
+                </div>
+                <div class="glass-card rounded-xl p-4 text-center gradient-border">
+                    <div id="statQuestions" class="text-2xl font-bold text-cyan-500">0</div>
+                    <div class="text-xs text-[var(--muted)] mt-1">Questions</div>
+                </div>
+                <div class="glass-card rounded-xl p-4 text-center gradient-border">
+                    <div id="statVisible" class="text-2xl font-bold text-emerald-500">0</div>
+                    <div class="text-xs text-[var(--muted)] mt-1">Visible</div>
+                </div>
+                <div class="glass-card rounded-xl p-4 text-center gradient-border">
+                    <div id="statPercent" class="text-2xl font-bold text-amber-500">0%</div>
+                    <div class="text-xs text-[var(--muted)] mt-1">Opened</div>
+                </div>
+            </div>
+
+            <div id="questionsContainer" class="space-y-4">
+                <div id="emptyState" class="text-center py-20 text-[var(--muted)]">
+                    <span class="text-6xl block mb-4">📖</span>
+                    <p class="text-lg font-semibold mb-1 text-[var(--text-primary)]">No questions loaded yet</p>
+                    <p class="text-sm">
+                        Click <strong class="text-accent">Upload JSON</strong> to load your Q&A file,
+                        <br />or use the sample data included below.
+                    </p>
+                    <button id="loadSampleBtn" class="mt-4 px-6 py-2.5 rounded-xl bg-[var(--surface)] border border-accent text-accent text-sm font-semibold hover:bg-accent hover:text-white transition-all duration-200">
+                        📥 Load Sample Data
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="toastContainer" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] flex flex-col items-center gap-2 pointer-events-none"></div>
+
+    <script>
+        (function() {
+            // DOM References
+            const fileInput = document.getElementById('fileInput');
+            const uploadBtn = document.getElementById('uploadBtn');
+            const searchInput = document.getElementById('searchInput');
+            const searchCount = document.getElementById('searchCount');
+            const topicNav = document.getElementById('topicNav');
+            const emptySidebar = document.getElementById('emptySidebar');
+            const questionsContainer = document.getElementById('questionsContainer');
+            const emptyState = document.getElementById('emptyState');
+            const loadSampleBtn = document.getElementById('loadSampleBtn');
+            const loadLocalBtn = document.getElementById('loadLocalBtn');
+            const expandAllBtn = document.getElementById('expandAllBtn');
+            const collapseAllBtn = document.getElementById('collapseAllBtn');
+            const statsRow = document.getElementById('statsRow');
+            const statTopics = document.getElementById('statTopics');
+            const statQuestions = document.getElementById('statQuestions');
+            const statVisible = document.getElementById('statVisible');
+            const statPercent = document.getElementById('statPercent');
+            const toastContainer = document.getElementById('toastContainer');
+            const datasetInfo = document.getElementById('datasetInfo');
+            const themeToggleBtn = document.getElementById('themeToggleBtn');
+            const sunIcon = document.getElementById('sunIcon');
+            const moonIcon = document.getElementById('moonIcon');
+            const timerDisplay = document.getElementById('timerDisplay');
+            const timerRing = document.getElementById('timerRing');
+            const timerToggleBtn = document.getElementById('timerToggleBtn');
+            const timerResetBtn = document.getElementById('timerResetBtn');
+            const timerPlayIcon = document.getElementById('timerPlayIcon');
+            const timerPauseIcon = document.getElementById('timerPauseIcon');
+
+            // State
+            let allTopics = [];
+            let activeTopicIndex = 0;
+            let showBookmarksOnly = false;
+            let openedSet = new Set();
+            let bookmarkedSet = new Set();
+            let datasetTitle = '';
+            let datasetDescription = '';
+            let datasetVersion = '';
+
+            // Timer State
+            const TIMER_DURATION = 25 * 60;
+            let timeLeft = TIMER_DURATION;
+            let timerInterval = null;
+            let isTimerRunning = false;
+
+            // Theme
+            function initTheme() {
+                const saved = localStorage.getItem('interviewPrepTheme');
+                if (saved === 'light') {
+                    document.documentElement.classList.remove('dark');
+                    sunIcon.classList.remove('hidden');
+                    moonIcon.classList.add('hidden');
+                } else {
+                    document.documentElement.classList.add('dark');
+                    sunIcon.classList.add('hidden');
+                    moonIcon.classList.remove('hidden');
+                }
+            }
+
+            function toggleTheme() {
+                const isDark = document.documentElement.classList.toggle('dark');
+                if (isDark) {
+                    sunIcon.classList.add('hidden');
+                    moonIcon.classList.remove('hidden');
+                    localStorage.setItem('interviewPrepTheme', 'dark');
+                } else {
+                    sunIcon.classList.remove('hidden');
+                    moonIcon.classList.add('hidden');
+                    localStorage.setItem('interviewPrepTheme', 'light');
+                }
+            }
+
+            // Timer Functions
+            function formatTime(seconds) {
+                const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+                const s = (seconds % 60).toString().padStart(2, '0');
+                return `${m}:${s}`;
+            }
+
+            function updateTimerRing() {
+                const progress = (TIMER_DURATION - timeLeft) / TIMER_DURATION;
+                const offset = 100 - (progress * 100);
+                timerRing.style.strokeDashoffset = offset;
+            }
+
+            function updateTimerDisplay() {
+                timerDisplay.textContent = formatTime(timeLeft);
+                updateTimerRing();
+            }
+
+            function startTimer() {
+                if (isTimerRunning) return;
+                isTimerRunning = true;
+                timerPlayIcon.classList.add('hidden');
+                timerPauseIcon.classList.remove('hidden');
+                timerInterval = setInterval(() => {
+                    if (timeLeft > 0) {
+                        timeLeft--;
+                        updateTimerDisplay();
+                    } else {
+                        pauseTimer();
+                        showToast('⏰ Timer finished!', 'info');
+                        // Reset after finish
+                        timeLeft = TIMER_DURATION;
+                        updateTimerDisplay();
+                    }
+                }, 1000);
+            }
+
+            function pauseTimer() {
+                isTimerRunning = false;
+                timerPlayIcon.classList.remove('hidden');
+                timerPauseIcon.classList.add('hidden');
+                if (timerInterval) {
+                    clearInterval(timerInterval);
+                    timerInterval = null;
+                }
+            }
+
+            function resetTimer() {
+                pauseTimer();
+                timeLeft = TIMER_DURATION;
+                updateTimerDisplay();
+            }
+
+            function toggleTimer() {
+                if (isTimerRunning) {
+                    pauseTimer();
+                } else {
+                    startTimer();
+                }
+            }
+
+            // Utility: Toast
+            function showToast(message, type = 'info') {
+                const toast = document.createElement('div');
+                const bgColor = type === 'error' ? 'bg-red-500' : 'bg-accent';
+                toast.className = `${bgColor} text-white text-sm font-medium px-5 py-2.5 rounded-full shadow-lg toast-enter pointer-events-auto`;
+                toast.textContent = message;
+                toastContainer.appendChild(toast);
+                setTimeout(() => {
+                    toast.classList.remove('toast-enter');
+                    toast.classList.add('toast-exit');
+                    toast.addEventListener('animationend', () => toast.remove(), { once: true });
+                }, 2500);
+            }
+
+            // localStorage persistence
+            function saveToLocalStorage() {
+                try {
+                    const data = {
+                        topics: allTopics,
+                        opened: [...openedSet],
+                        bookmarks: [...bookmarkedSet],
+                        activeIndex: activeTopicIndex,
+                        showBookmarks: showBookmarksOnly,
+                        datasetTitle,
+                        datasetDescription,
+                        datasetVersion,
+                    };
+                    localStorage.setItem('interviewPrepData', JSON.stringify(data));
+                } catch (e) { console.warn(e); }
+            }
+
+            function loadFromLocalStorage() {
+                try {
+                    const raw = localStorage.getItem('interviewPrepData');
+                    if (!raw) return false;
+                    const data = JSON.parse(raw);
+                    if (!data.topics || !Array.isArray(data.topics)) return false;
+                    allTopics = data.topics;
+                    openedSet = new Set(data.opened || []);
+                    bookmarkedSet = new Set(data.bookmarks || []);
+                    activeTopicIndex = (typeof data.activeIndex === 'number' && data.activeIndex >= 0 && data.activeIndex < allTopics.length) ? data.activeIndex : 0;
+                    showBookmarksOnly = !!data.showBookmarks;
+                    datasetTitle = data.datasetTitle || '';
+                    datasetDescription = data.datasetDescription || '';
+                    datasetVersion = data.datasetVersion || '';
+                    return true;
+                } catch (e) { return false; }
+            }
+
+            function renderDatasetInfo() {
+                if (datasetTitle) {
+                    let info = datasetTitle;
+                    if (datasetDescription) info += ` — ${datasetDescription}`;
+                    if (datasetVersion) info += ` (v${datasetVersion})`;
+                    datasetInfo.textContent = info;
+                    datasetInfo.classList.remove('hidden');
+                } else {
+                    datasetInfo.textContent = '';
+                    datasetInfo.classList.add('hidden');
+                }
+            }
+
+            // ========== FIXED: detectAndConvertFormat handles combined arrays and generic JSON shapes ==========
+            function detectAndConvertFormat(data) {
+                const normalizeString = (value) => {
+                    if (typeof value === 'string') return value.trim();
+                    if (typeof value === 'number' || typeof value === 'boolean') return String(value).trim();
+                    return '';
+                };
+
+                const normalizeQAItem = (item) => {
+                    if (!item) return null;
+                    if (Array.isArray(item) && item.length >= 2) {
+                        const question = normalizeString(item[0]);
+                        const answer = normalizeString(item[1]);
+                        return question && answer ? { question, answer } : null;
+                    }
+                    if (typeof item === 'string') {
+                        const raw = item.trim();
+                        const separators = ['|', '\t', ' - ', ' — ', ' – ', ': '];
+                        for (const sep of separators) {
+                            if (raw.includes(sep)) {
+                                const [question, ...rest] = raw.split(sep);
+                                const answer = rest.join(sep).trim();
+                                if (question && answer) return { question: question.trim(), answer };
+                            }
+                        }
+                        return null;
+                    }
+                    if (typeof item !== 'object') return null;
+                    const question = normalizeString(item.question || item.q || item.title || item.prompt || item.questionText || item.question_text || item.Q);
+                    const answer = normalizeString(item.answer || item.a || item.response || item.content || item.value || item.A);
+                    const id = normalizeString(item.id ?? item.ID ?? item._id ?? item.questionId ?? item.qid);
+                    return question && answer ? (id ? { question, answer, id } : { question, answer }) : null;
+                };
+
+                const normalizeTopicObject = (topic, fallbackName) => {
+                    if (!topic || typeof topic !== 'object') return null;
+                    const name = normalizeString(topic.name || topic.title || topic.topic || topic.subject || topic.label || fallbackName);
+                    const qaArray = Array.isArray(topic.qa) ? topic.qa
+                        : Array.isArray(topic.questions) ? topic.questions
+                        : Array.isArray(topic.items) ? topic.items
+                        : Array.isArray(topic.data) ? topic.data
+                        : Array.isArray(topic.questionsList) ? topic.questionsList
+                        : [];
+                    const qa = qaArray.map(normalizeQAItem).filter(Boolean);
+                    if (qa.length) return { name: name || 'Imported Topic', qa };
+
+                    const objectQa = [];
+                    for (const [subKey, subValue] of Object.entries(topic)) {
+                        if (subKey === 'name' || subKey === 'title' || subKey === 'topic' || subKey === 'subject' || subKey === 'label') continue;
+                        if (typeof subValue === 'string' || typeof subValue === 'number' || typeof subValue === 'boolean') {
+                            const q = normalizeString(subKey);
+                            const a = normalizeString(subValue);
+                            if (q && a) objectQa.push({ question: q, answer: a });
+                        } else {
+                            const maybeQa = normalizeQAItem(subValue);
+                            if (maybeQa) objectQa.push(maybeQa);
+                        }
+                    }
+                    return objectQa.length ? { name: name || 'Imported Topic', qa: objectQa } : null;
+                };
+
+                if (data && typeof data === 'object' && data.topics && Array.isArray(data.topics)) {
+                    const topics = data.topics.map((topic, index) => normalizeTopicObject(topic, `Topic ${index + 1}`)).filter(Boolean);
+                    if (topics.length) return { data: { topics }, converted: false };
+                }
+
+                if (Array.isArray(data) && data.length > 0) {
+                    const topicCandidates = data.map((item, index) => normalizeTopicObject(item, `Topic ${index + 1}`)).filter(Boolean);
+                    if (topicCandidates.length === data.length) return { data: { topics: topicCandidates }, converted: true };
+                    const qa = data.map(normalizeQAItem).filter(Boolean);
+                    if (qa.length) return { data: { topics: [{ name: 'Imported Questions', qa }] }, converted: true };
+                    const fallback = [];
+                    for (const item of data) {
+                        if (item && typeof item === 'object' && !Array.isArray(item)) {
+                            const keys = Object.keys(item);
+                            if (keys.length >= 2) {
+                                const q = normalizeString(item[keys[0]]);
+                                const a = normalizeString(item[keys[1]]);
+                                if (q && a) fallback.push({ question: q, answer: a });
+                            }
+                        }
+                    }
+                    if (fallback.length) return { data: { topics: [{ name: 'Imported Questions', qa: fallback }] }, converted: true };
+                }
+
+                if (data && typeof data === 'object' && !Array.isArray(data)) {
+                    const keyValueItems = [];
+                    const topics = [];
+                    for (const [key, value] of Object.entries(data)) {
+                        if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+                            keyValueItems.push({ question: normalizeString(key), answer: normalizeString(value) });
+                            continue;
+                        }
+                        if (Array.isArray(value)) {
+                            const topic = normalizeTopicObject({ name: key, qa: value }, key);
+                            if (topic) { topics.push(topic); continue; }
+                            const qa = value.map(normalizeQAItem).filter(Boolean);
+                            if (qa.length) { topics.push({ name: normalizeString(key) || 'Imported Topic', qa }); continue; }
+                        }
+                        if (typeof value === 'object' && value !== null) {
+                            const topic = normalizeTopicObject(value, key);
+                            if (topic) { topics.push(topic); continue; }
+                            const objectQa = [];
+                            for (const [subKey, subValue] of Object.entries(value)) {
+                                if (typeof subValue === 'string' || typeof subValue === 'number' || typeof subValue === 'boolean') {
+                                    objectQa.push({ question: normalizeString(subKey), answer: normalizeString(subValue) });
+                                } else {
+                                    const maybeQa = normalizeQAItem(subValue);
+                                    if (maybeQa) objectQa.push(maybeQa);
+                                }
+                            }
+                            if (objectQa.length) topics.push({ name: normalizeString(key) || 'Imported Topic', qa: objectQa });
+                        }
+                    }
+                    if (topics.length) return { data: { topics }, converted: true };
+                    if (keyValueItems.length) return { data: { topics: [{ name: 'Imported Questions', qa: keyValueItems }] }, converted: true };
+                }
+
+                return { data: null, converted: false };
+            }
+
+            function normalizeValue(value) {
+                if (typeof value === 'string') return value.trim();
+                if (typeof value === 'number' || typeof value === 'boolean') return String(value).trim();
+                return '';
+            }
+
+            function normalizeTopics(topics) {
+                return topics.map(topic => {
+                    const name = normalizeValue(topic.name || topic.title || topic.topic || topic.subject || topic.label || 'Imported Topic');
+                    const qaItems = Array.isArray(topic.qa) ? topic.qa : Array.isArray(topic.questions) ? topic.questions : Array.isArray(topic.items) ? topic.items : [];
+                    const qa = qaItems.map(item => {
+                        const question = normalizeValue(item?.question ?? item?.q ?? item?.title ?? item?.prompt ?? item?.questionText ?? item?.question_text ?? item?.Q);
+                        const answer = normalizeValue(item?.answer ?? item?.a ?? item?.response ?? item?.content ?? item?.value ?? item?.A);
+                        const id = normalizeValue(item?.id ?? item?.ID ?? item?._id ?? item?.questionId ?? item?.qid);
+                        return question && answer ? (id ? { question, answer, id } : { question, answer }) : null;
+                    }).filter(Boolean);
+                    return { name: name || 'Imported Topic', qa };
+                }).filter(topic => topic.name && topic.qa.length > 0);
+            }
+
+            function validateJSON(data) {
+                if (!data || typeof data !== 'object') return 'Invalid JSON: root must be an object.';
+                if (!Array.isArray(data.topics)) return 'Invalid JSON: "topics" must be an array.';
+                if (data.topics.length === 0) return 'JSON is valid but contains no topics.';
+                for (let i = 0; i < data.topics.length; i++) {
+                    const topic = data.topics[i];
+                    const topicName = normalizeValue(topic.name || topic.title || topic.topic || topic.subject || topic.label);
+                    if (!topicName) return `Topic at index ${i} is missing a valid "name" field.`;
+                    if (!Array.isArray(topic.qa) || topic.qa.length === 0) return `Topic "${topicName}" has no questions (qa array is empty or missing).`;
+                    for (let j = 0; j < topic.qa.length; j++) {
+                        const item = topic.qa[j];
+                        const question = normalizeValue(item?.question ?? item?.q ?? item?.title ?? item?.prompt ?? item?.questionText ?? item?.question_text ?? item?.Q);
+                        const answer = normalizeValue(item?.answer ?? item?.a ?? item?.response ?? item?.content ?? item?.value ?? item?.A);
+                        if (!question) return `Topic "${topicName}", Q&A #${j + 1}: missing or invalid "question".`;
+                        if (!answer) return `Topic "${topicName}", Q&A #${j + 1}: missing or invalid "answer".`;
+                    }
+                }
+                return null;
+            }
+
+            function loadParsedJson(parsed, fallbackTitle, toastMessage) {
+                const { data: convertedData, converted } = detectAndConvertFormat(parsed);
+                if (!convertedData) { showToast('❌ Could not parse JSON. Please check the format.', 'error'); return false; }
+                const errorMsg = validateJSON(convertedData);
+                if (errorMsg) { showToast('❌ ' + errorMsg, 'error'); return false; }
+
+                datasetTitle = normalizeValue(parsed.title || parsed.name || parsed.datasetTitle || fallbackTitle);
+                datasetDescription = normalizeValue(parsed.description || parsed.summary || parsed.details || '');
+                datasetVersion = normalizeValue(parsed.version || parsed.datasetVersion || parsed.metaVersion || '');
+                allTopics = normalizeTopics(convertedData.topics);
+                activeTopicIndex = 0;
+                showBookmarksOnly = false;
+                openedSet = new Set();
+                bookmarkedSet = new Set();
+                saveToLocalStorage();
+                renderDatasetInfo();
+                renderTopics();
+                renderQuestions();
+                updateStats();
+                showToast(toastMessage || (converted ? `✅ Converted & loaded ${allTopics.length} topic(s)!` : `✅ Loaded ${allTopics.length} topic(s) successfully!`));
+                return true;
+            }
+
+            function handleFileUpload(file) {
+                if (!file) return;
+                if (!file.name.toLowerCase().endsWith('.json')) { showToast('❌ Please select a .json file.', 'error'); return; }
+                if (file.size > 5 * 1024 * 1024) { showToast('❌ File too large. Maximum size is 5 MB.', 'error'); return; }
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const parsed = JSON.parse(e.target.result);
+                        loadParsedJson(parsed, 'Uploaded JSON');
+                    } catch (err) { showToast('❌ Invalid JSON file. Please check the syntax.', 'error'); }
+                };
+                reader.onerror = () => showToast('❌ Error reading file.', 'error');
+                reader.readAsText(file);
+            }
+
+            function toggleBookmark(qKey, starElement) {
+                if (bookmarkedSet.has(qKey)) {
+                    bookmarkedSet.delete(qKey);
+                    starElement.classList.remove('bookmarked');
+                    starElement.innerHTML = getStarSVG(false);
+                    showToast('Bookmark removed');
+                } else {
+                    bookmarkedSet.add(qKey);
+                    starElement.classList.add('bookmarked');
+                    starElement.innerHTML = getStarSVG(true);
+                    showToast('⭐ Bookmarked!');
+                }
+                saveToLocalStorage();
+                if (showBookmarksOnly) renderQuestions();
+            }
+
+            function getStarSVG(filled) {
+                if (filled) {
+                    return `<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.56 5.82 22 7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`;
+                } else {
+                    return `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"/></svg>`;
+                }
+            }
+
+            function renderTopics() {
+                topicNav.innerHTML = '';
+                if (allTopics.length > 0) {
+                    const bookmarkBtn = document.createElement('button');
+                    bookmarkBtn.className = `topic-tab w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 flex items-center gap-2 ${showBookmarksOnly ? 'active-topic-gradient text-white shadow-lg shadow-accent/25' : 'text-[var(--text-secondary)] hover:bg-[var(--surface-alt)] hover:text-[var(--text-primary)]'}`;
+                    bookmarkBtn.innerHTML = `<span class="text-base">⭐</span> Bookmarks`;
+                    bookmarkBtn.addEventListener('click', () => {
+                        showBookmarksOnly = true;
+                        activeTopicIndex = -1;
+                        renderTopics();
+                        renderQuestions();
+                        saveToLocalStorage();
+                    });
+                    topicNav.appendChild(bookmarkBtn);
+                    const divider = document.createElement('div');
+                    divider.className = 'border-t border-[var(--border)] my-2';
+                    topicNav.appendChild(divider);
+                }
+                if (allTopics.length === 0) { emptySidebar.classList.remove('hidden'); return; }
+                emptySidebar.classList.add('hidden');
+                allTopics.forEach((topic, index) => {
+                    const btn = document.createElement('button');
+                    btn.className = `topic-tab w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${(!showBookmarksOnly && index === activeTopicIndex) ? 'active-topic-gradient text-white shadow-lg shadow-accent/25' : 'text-[var(--text-secondary)] hover:bg-[var(--surface-alt)] hover:text-[var(--text-primary)]'}`;
+                    btn.textContent = topic.name;
+                    btn.addEventListener('click', () => {
+                        showBookmarksOnly = false;
+                        activeTopicIndex = index;
+                        renderTopics();
+                        renderQuestions();
+                        saveToLocalStorage();
+                        questionsContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    });
+                    topicNav.appendChild(btn);
+                });
+            }
+
+            function renderQuestions() {
+                questionsContainer.innerHTML = '';
+                const searchTerm = searchInput.value.toLowerCase().trim();
+                if (showBookmarksOnly) {
+                    if (bookmarkedSet.size === 0) {
+                        questionsContainer.innerHTML = `<div class="text-center py-16 text-[var(--muted)]"><span class="text-5xl block mb-3">⭐</span><p class="text-lg font-semibold mb-1 text-[var(--text-primary)]">No bookmarks yet</p><p class="text-sm">Click the star icon on any question to save it here.</p></div>`;
+                        emptyState.classList.add('hidden');
+                        statsRow.classList.add('hidden');
+                        return;
+                    }
+                    let bookmarkedItems = [];
+                    allTopics.forEach((topic, topicIdx) => {
+                        topic.qa.forEach((item, qIdx) => {
+                            const qKey = item.id ? `${topicIdx}::${item.id}` : `${topicIdx}::${qIdx}`;
+                            if (bookmarkedSet.has(qKey)) bookmarkedItems.push({ ...item, topicName: topic.name, qKey });
+                        });
+                    });
+                    if (searchTerm) bookmarkedItems = bookmarkedItems.filter(item => item.question.toLowerCase().includes(searchTerm) || item.answer.toLowerCase().includes(searchTerm));
+                    const heading = document.createElement('div');
+                    heading.className = 'mb-4 flex items-center gap-2';
+                    heading.innerHTML = `<h2 class="text-xl font-bold text-[var(--text-primary)]">⭐ Bookmarked Questions</h2><span class="text-sm text-[var(--muted)]">(${bookmarkedItems.length})</span>`;
+                    questionsContainer.appendChild(heading);
+                    if (bookmarkedItems.length === 0) {
+                        questionsContainer.innerHTML += `<div class="text-center py-10 text-[var(--muted)] text-sm">No bookmarked questions match your search.</div>`;
+                    } else {
+                        bookmarkedItems.forEach(item => questionsContainer.appendChild(createQuestionCard(item.question, item.answer, item.qKey, item.topicName, item.id)));
+                    }
+                    statsRow.classList.add('hidden');
+                } else {
+                    if (allTopics.length === 0 || !allTopics[activeTopicIndex]) {
+                        emptyState.classList.remove('hidden');
+                        statsRow.classList.add('hidden');
+                        return;
+                    }
+                    emptyState.classList.add('hidden');
+                    statsRow.classList.remove('hidden');
+                    const topic = allTopics[activeTopicIndex];
+                    let visibleCount = 0;
+                    topic.qa.forEach((item, qIndex) => {
+                        const qKey = item.id ? `${activeTopicIndex}::${item.id}` : `${activeTopicIndex}::${qIndex}`;
+                        const matchesSearch = !searchTerm || item.question.toLowerCase().includes(searchTerm) || item.answer.toLowerCase().includes(searchTerm);
+                        if (!matchesSearch) return;
+                        visibleCount++;
+                        questionsContainer.appendChild(createQuestionCard(item.question, item.answer, qKey, topic.name, item.id));
+                    });
+                    if (searchTerm) { searchCount.classList.remove('hidden'); searchCount.textContent = `${visibleCount} found`; }
+                    else { searchCount.classList.add('hidden'); }
+                    updateStats();
+                }
+            }
+
+            function createQuestionCard(question, answer, qKey, topicName, id) {
+                const wasOpened = openedSet.has(qKey);
+                const isBookmarked = bookmarkedSet.has(qKey);
+                const card = document.createElement('div');
+                card.className = 'qa-card glass-card rounded-2xl overflow-hidden';
+                card.setAttribute('data-qkey', qKey);
+                const header = document.createElement('div');
+                header.className = 'flex items-start justify-between gap-3 px-5 py-4 cursor-pointer group';
+                const leftDiv = document.createElement('div');
+                leftDiv.className = 'flex-1 min-w-0';
+                // ID display removed from UI as requested
+                leftDiv.innerHTML = `<div class="flex items-start gap-3"><span class="text-accent font-bold text-sm shrink-0 mt-0.5">Q</span><span class="text-[var(--text-primary)] text-sm font-medium leading-snug">${escapeHTML(question)}</span></div>${showBookmarksOnly ? `<span class="text-xs text-[var(--muted)] mt-1 block">${escapeHTML(topicName)}</span>` : ''}`;
+                const rightDiv = document.createElement('div');
+                rightDiv.className = 'flex items-center gap-2 shrink-0';
+                const starBtn = document.createElement('button');
+                starBtn.className = 'bookmark-btn p-1 rounded-lg hover:bg-[var(--surface-alt)] transition-colors';
+                starBtn.innerHTML = getStarSVG(isBookmarked);
+                if (isBookmarked) starBtn.classList.add('bookmarked');
+                starBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleBookmark(qKey, starBtn); });
+                const chevron = document.createElement('span');
+                chevron.className = `chevron-icon text-[var(--muted)] transition-transform duration-300 ${wasOpened ? 'rotate-180' : ''}`;
+                chevron.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>`;
+                rightDiv.appendChild(starBtn);
+                rightDiv.appendChild(chevron);
+                header.appendChild(leftDiv);
+                header.appendChild(rightDiv);
+                const answerPanel = document.createElement('div');
+                answerPanel.className = 'answer-panel' + (wasOpened ? ' open' : '');
+                answerPanel.innerHTML = `<div class="answer-inner"><div class="px-5 pb-4 pt-0 ml-7 border-t border-[var(--border)]"><p class="text-[var(--text-secondary)] text-sm leading-relaxed whitespace-pre-line">${escapeHTML(answer)}</p></div></div>`;
+                header.addEventListener('click', (e) => {
+                    if (e.target.closest('.bookmark-btn')) return;
+                    const isNowOpen = !answerPanel.classList.contains('open');
+                    if (isNowOpen) { answerPanel.classList.add('open'); chevron.classList.add('rotate-180'); openedSet.add(qKey); }
+                    else { answerPanel.classList.remove('open'); chevron.classList.remove('rotate-180'); openedSet.delete(qKey); }
+                    saveToLocalStorage();
+                    if (!showBookmarksOnly) updateStats();
+                });
+                card.appendChild(header);
+                card.appendChild(answerPanel);
+                return card;
+            }
+
+            function searchQuestions() { renderQuestions(); }
+            function updateStats() {
+                if (allTopics.length === 0) { statsRow.classList.add('hidden'); return; }
+                statsRow.classList.remove('hidden');
+                let totalTopics = allTopics.length;
+                let totalQuestions = 0;
+                allTopics.forEach(t => totalQuestions += t.qa.length);
+                const visibleCards = questionsContainer.querySelectorAll('.qa-card').length;
+                const pct = totalQuestions > 0 ? Math.round((openedSet.size / totalQuestions) * 100) : 0;
+                statTopics.textContent = totalTopics;
+                statQuestions.textContent = totalQuestions;
+                statVisible.textContent = visibleCards;
+                statPercent.textContent = pct + '%';
+            }
+            function expandAll() {
+                document.querySelectorAll('.answer-panel').forEach(p => { if (!p.classList.contains('open')) { p.classList.add('open'); const qKey = p.parentElement?.getAttribute('data-qkey'); if (qKey) openedSet.add(qKey); } });
+                document.querySelectorAll('.chevron-icon').forEach(c => c.classList.add('rotate-180'));
+                saveToLocalStorage();
+                if (!showBookmarksOnly) updateStats();
+            }
+            function collapseAll() {
+                document.querySelectorAll('.answer-panel').forEach(p => p.classList.remove('open'));
+                document.querySelectorAll('.chevron-icon').forEach(c => c.classList.remove('rotate-180'));
+                openedSet.clear();
+                saveToLocalStorage();
+                if (!showBookmarksOnly) updateStats();
+            }
+            function getSampleData() {
+                return { topics: [{ name: 'Python', qa: [{ question: 'What is Python?', answer: 'Python is a high-level, interpreted programming language known for its readability and versatility.' }, { question: 'What are Python decorators?', answer: 'Decorators are functions that modify the behavior of other functions or methods.' }, { question: 'Explain list comprehensions.', answer: 'List comprehensions provide a concise way to create lists: [x*2 for x in range(10)].' }, { question: 'What is the difference between a tuple and a list?', answer: 'Tuples are immutable, lists are mutable. Tuples use (), lists use [].' }, { question: 'How does Python handle memory management?', answer: 'Python uses automatic reference counting and a cyclic garbage collector.' }] }, { name: 'JavaScript', qa: [{ question: 'What is the difference between let, const, and var?', answer: 'var is function-scoped, let/const are block-scoped. const cannot be reassigned.' }, { question: 'Explain closures in JavaScript.', answer: 'A closure retains access to its outer scope even after the outer function returns.' }, { question: 'What is the Event Loop?', answer: 'The Event Loop handles asynchronous callbacks, checking the call stack and task queue.' }, { question: 'What are Promises?', answer: 'Promises represent eventual completion of async ops, with .then() and .catch().' }, { question: 'What is the DOM?', answer: 'The DOM is a tree representation of HTML, allowing dynamic page manipulation.' }] }] };
+            }
+            async function loadIncludedJson() {
+                try {
+                    const response = await fetch('./combined.json');
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const parsed = await response.json();
+                    loadParsedJson(parsed, 'combined.json', `✅ Loaded ${allTopics.length} topic(s) from combined.json`);
+                } catch (err) {
+                    console.warn(err);
+                    showToast('❌ Could not load combined.json. If you opened the file locally, use Upload JSON instead.', 'error');
+                }
+            }
+
+            function loadSampleData() {
+                allTopics = getSampleData().topics;
+                datasetTitle = 'Sample Data';
+                datasetDescription = 'Built-in sample Q&A dataset for demonstration.';
+                activeTopicIndex = 0;
+                showBookmarksOnly = false;
+                openedSet = new Set();
+                bookmarkedSet = new Set();
+                saveToLocalStorage();
+                renderDatasetInfo();
+                renderTopics();
+                renderQuestions();
+                updateStats();
+                showToast('📥 Sample data loaded!');
+                questionsContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            function escapeHTML(str) {
+                const div = document.createElement('div');
+                div.textContent = str;
+                return div.innerHTML;
+            }
+
+            uploadBtn.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', (e) => { handleFileUpload(e.target.files[0]); fileInput.value = ''; });
+            searchInput.addEventListener('input', searchQuestions);
+            loadSampleBtn.addEventListener('click', loadSampleData);
+            loadLocalBtn.addEventListener('click', loadIncludedJson);
+            expandAllBtn.addEventListener('click', expandAll);
+            collapseAllBtn.addEventListener('click', collapseAll);
+            themeToggleBtn.addEventListener('click', toggleTheme);
+            timerToggleBtn.addEventListener('click', toggleTimer);
+            timerResetBtn.addEventListener('click', resetTimer);
+            document.addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); searchInput.focus(); } });
+
+            function init() {
+                initTheme();
+                updateTimerDisplay();
+                const loaded = loadFromLocalStorage();
+                renderDatasetInfo();
+                if (loaded) { renderTopics(); renderQuestions(); if (allTopics.length > 0) emptyState.classList.add('hidden'); }
+                else { emptyState.classList.remove('hidden'); statsRow.classList.add('hidden'); emptySidebar.classList.remove('hidden'); }
+            }
+            init();
+        })();
+    </script>
+</body>
+</html>
